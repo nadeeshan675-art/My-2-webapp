@@ -3,59 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SL Business Pro - Enterprise Management</title>
-    <!-- Tailwind CSS (V4 Development) -->
+    <title>SL Business Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & Babel CDNs (Production Ready Links) -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-        body { font-family: sans-serif; background-color: #f3f4f6; }
-    </style>
 </head>
-<body>
+<body class="bg-gray-100">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState } = React;
 
         function App() {
             const [token, setToken] = useState(localStorage.getItem('token') || null);
-            const [role, setRole] = useState(localStorage.getItem('role') || null);
-            const [lang, setLang] = useState('EN');
-            const [view, setView] = useState('dashboard');
-            const [authForm, setAuthForm] = useState({ username: '', password: '', fullName: '', companyName: '', phone: '', email: '' });
             const [isRegister, setIsRegister] = useState(false);
+            const [authForm, setAuthForm] = useState({ username: '', password: '', fullName: '', companyName: '', phone: '', email: '' });
 
-            const [products, setProducts] = useState([]);
-            const [customers, setCustomers] = useState([]);
-            const [orders, setOrders] = useState([]);
-            const [employees, setEmployees] = useState([]);
-            const [orderForm, setOrderForm] = useState({ customerId: '', itemId: '', quantity: 1, paymentMethod: 'Cash' });
-
-            useEffect(() => {
-                if (token) fetchData();
-            }, [token]);
-
-            const fetchData = async () => {
-                const headers = { 'Authorization': `Bearer ${token}` };
+            const handleRegister = async (e) => {
+                e.preventDefault();
                 try {
-                    const resProds = await fetch('http://localhost:5000/api/products', { headers });
-                    if (resProds.ok) setProducts(await resProds.json());
-
-                    const resCusts = await fetch('http://localhost:5000/api/customers', { headers });
-                    if (resCusts.ok) setCustomers(await resCusts.json());
-
-                    const resOrders = await fetch('http://localhost:5000/api/orders', { headers });
-                    if (resOrders.ok) setOrders(await resOrders.json());
-
-                    if (role === 'ADMIN') {
-                        const resEmps = await fetch('http://localhost:5000/api/employees', { headers });
-                        if (resEmps.ok) setEmployees(await resEmps.json());
+                    const res = await fetch('http://localhost:5000/api/auth/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(authForm)
+                    });
+                    
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        alert(`🎉 සාර්ථකයි! ඔබේ Company Code එක: ${data.companyCode}\nදැන් මෙම Username සහ Password භාවිතයෙන් Login වන්න.`);
+                        setIsRegister(false);
+                    } else {
+                        alert("ලියාපදිංචි වීම අසාර්ථකයි: " + (data.error || "Unknown Error"));
                     }
-                } catch (e) {
-                    console.error("Backend offline or connection error", e);
+                } catch (err) {
+                    console.error(err);
+                    alert("Backend සර්වර් එක සමඟ සම්බන්ධ විය නොහැක! node server.js Run කර ඇත්දැයි පරීක්ෂා කරන්න.");
                 }
             };
 
@@ -68,61 +51,41 @@
                         body: JSON.stringify({ username: authForm.username, password: authForm.password })
                     });
                     const data = await res.json();
-                    if (data.token) {
+                    if (res.ok && data.token) {
                         localStorage.setItem('token', data.token);
-                        localStorage.setItem('role', data.role);
                         setToken(data.token);
-                        setRole(data.role);
                     } else {
                         alert(data.error);
                     }
-                } catch(err) {
-                    alert("Cannot connect to Backend Server. Make sure node server.js is running!");
+                } catch (err) {
+                    alert("සර්වර් එක ක්‍රියාවිරහිතයි!");
                 }
-            };
-
-            const handleRegister = async (e) => {
-                e.preventDefault();
-                const res = await fetch('http://localhost:5000/api/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(authForm)
-                });
-                const data = await res.json();
-                if (data.success) {
-                    alert(`Registration Successful! Company Code: ${data.companyCode}`);
-                    setIsRegister(false);
-                } else {
-                    alert(data.error);
-                }
-            };
-
-            const logout = () => {
-                localStorage.clear();
-                setToken(null);
-                setRole(null);
             };
 
             if (!token) {
                 return (
                     <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
                         <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-6">{isRegister ? 'Register Business' : 'Login Panel'}</h2>
+                            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+                                {isRegister ? 'Business Registration' : 'Business Login'}
+                            </h2>
                             <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4">
                                 {isRegister && (
                                     <>
-                                        <input type="text" placeholder="Full Name" className="w-full p-3 border rounded-xl" onChange={e => setAuthForm({...authForm, fullName: e.target.value})} required />
-                                        <input type="text" placeholder="Business Name" className="w-full p-3 border rounded-xl" onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required />
-                                        <input type="text" placeholder="Phone" className="w-full p-3 border rounded-xl" onChange={e => setAuthForm({...authForm, phone: e.target.value})} required />
-                                        <input type="email" placeholder="Email" className="w-full p-3 border rounded-xl" onChange={e => setAuthForm({...authForm, email: e.target.value})} required />
+                                        <input type="text" placeholder="Full Name (සම්පූර්ණ නම)" className="w-full p-3 border rounded-xl" onChange={e => setAuthForm({...authForm, fullName: e.target.value})} required />
+                                        <input type="text" placeholder="Business Name (ව්‍යාපාරයේ නම)" className="w-full p-3 border rounded-xl" onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required />
+                                        <input type="text" placeholder="Phone (දුරකථන අංකය)" className="w-full p-3 border rounded-xl" onChange={e => setAuthForm({...authForm, phone: e.target.value})} />
+                                        <input type="email" placeholder="Email (ඊමේල්)" className="w-full p-3 border rounded-xl" onChange={e => setAuthForm({...authForm, email: e.target.value})} />
                                     </>
                                 )}
                                 <input type="text" placeholder="Username" className="w-full p-3 border rounded-xl" onChange={e => setAuthForm({...authForm, username: e.target.value})} required />
                                 <input type="password" placeholder="Password" className="w-full p-3 border rounded-xl" onChange={e => setAuthForm({...authForm, password: e.target.value})} required />
-                                <button type="submit" className="w-full bg-blue-600 text-white p-3 rounded-xl font-semibold shadow-lg">{isRegister ? 'Register' : 'Sign In'}</button>
+                                <button type="submit" className="w-full bg-blue-600 text-white p-3 rounded-xl font-semibold shadow-lg hover:bg-blue-700 transition">
+                                    {isRegister ? 'Register Now' : 'Sign In'}
+                                </button>
                             </form>
-                            <p className="mt-4 text-center text-sm text-gray-600 cursor-pointer" onClick={() => setIsRegister(!isRegister)}>
-                                {isRegister ? 'Already have an account? Login' : 'New Business? Register here'}
+                            <p className="mt-4 text-center text-sm text-blue-600 cursor-pointer hover:underline" onClick={() => setIsRegister(!isRegister)}>
+                                {isRegister ? 'කලින් ගිණුමක් තිබේ නම්? Login වන්න' : 'නව ව්‍යාපාරයක් ලියාපදිංචි කිරීමට මෙතන ක්ලික් කරන්න'}
                             </p>
                         </div>
                     </div>
@@ -130,26 +93,14 @@
             }
 
             return (
-                <div className="min-h-screen flex flex-col md:flex-row">
-                    <aside className="bg-gray-800 text-white w-full md:w-64 p-5 flex flex-col justify-between">
-                        <div>
-                            <h1 className="text-xl font-bold mb-8">SL-BIZ PRO</h1>
-                            <nav className="space-y-2">
-                                <button onClick={() => setView('dashboard')} className="w-full text-left p-3 rounded-xl hover:bg-gray-700">📊 Dashboard</button>
-                                <button onClick={() => setView('orders')} className="w-full text-left p-3 rounded-xl hover:bg-gray-700">📦 Orders</button>
-                            </nav>
-                        </div>
-                        <button onClick={logout} className="bg-red-600 p-3 rounded-xl font-bold">🚪 Logout</button>
-                    </aside>
-                    <main className="flex-1 p-8">
-                        <h2 className="text-3xl font-bold mb-6">Welcome to Dashboard</h2>
-                        <p>All Core Modules Loaded and Ready.</p>
-                    </main>
+                <div className="p-8">
+                    <h1 className="text-3xl font-bold text-green-600">🎉 සාර්ථකව පද්ධතියට ඇතුළු විය!</h1>
+                    <p className="mt-2 text-gray-600">ඔබේ Business System එක සම්පූර්ණයෙන්ම ක්‍රියාකාරී තත්ත්වයේ පවතී.</p>
+                    <button onClick={() => { localStorage.clear(); setToken(null); }} className="mt-4 bg-red-600 text-white px-4 py-2 rounded-xl">Logout</button>
                 </div>
             );
         }
 
-        // CORRECTED RENDER CODE HERE
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
